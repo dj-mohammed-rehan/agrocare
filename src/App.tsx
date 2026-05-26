@@ -1055,27 +1055,6 @@ export default function App() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                   <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }} className="space-y-16">
-                    {currentDiagnosis.visualReference && (
-                      <motion.div 
-                        whileHover={{ scale: 1.02 }}
-                        className="rounded-[2.5rem] overflow-hidden border border-[#1F261F] relative group bg-[#0A0D0A] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)]"
-                      >
-                        <img 
-                          src={`https://loremflickr.com/800/600/${selectedCropData?.name || 'plant'},${currentDiagnosis.visualReference.split(' ').join(',')}`} 
-                          alt="Visual Reference"
-                          className="w-full aspect-square object-cover opacity-60 group-hover:opacity-100 transition-all duration-1000 scale-105 group-hover:scale-100"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                        <div className="absolute bottom-8 left-8">
-                          <p className="text-[10px] uppercase tracking-[0.4em] text-[#8AB67C] font-black mb-2 flex items-center gap-3">
-                            <span className="w-6 h-px bg-[#8AB67C]" /> Reference Imagery
-                          </p>
-                          <h5 className="text-xl font-serif italic text-zinc-100">{currentDiagnosis.issue}</h5>
-                        </div>
-                      </motion.div>
-                    )}
-                    
                     <div className="space-y-10">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-[#8AB67C]/10 rounded-2xl flex items-center justify-center border border-[#8AB67C]/20">
