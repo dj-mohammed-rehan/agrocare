@@ -25,7 +25,10 @@ import {
   Zap,
   FlaskConical,
   Plus,
-  MessageSquare
+  MessageSquare,
+  Clock,
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -187,129 +190,281 @@ function CameraModal({ onCapture, onClose }: { onCapture: (base64: string) => vo
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-
-  const startCamera = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
-      });
-      setStream(s);
-      if (videoRef.current) videoRef.current.srcObject = s;
-    } catch (err) {
-      console.error("Camera error:", err);
-      alert("Please allow camera permissions to use this feature.");
-      onClose();
-    }
-  };
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [showGrid, setShowGrid] = useState(true);
+  const [isFlashed, setIsFlashed] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(true);
 
   const capture = () => {
     if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(video, 0, 0);
-      const base64 = canvas.toDataURL('image/jpeg', 0.8);
-      onCapture(base64);
-      stream?.getTracks().forEach(track => track.stop());
+      setIsFlashed(true);
+      // Brief timeout to let user see flash and capture properly
+      setTimeout(() => {
+        setIsFlashed(false);
+        if (videoRef.current && canvasRef.current) {
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(video, 0, 0);
+          const base64 = canvas.toDataURL('image/jpeg', 0.85);
+          onCapture(base64);
+          
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+        }
+      }, 200);
     }
   };
 
-  useState(() => { startCamera(); });
+  React.useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    setCameraLoading(true);
+
+    const startCameraAndTrack = async () => {
+      try {
+        if (activeStream) {
+          activeStream.getTracks().forEach(track => track.stop());
+        }
+        const s = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: facingMode, 
+            width: { ideal: 1280 }, 
+            height: { ideal: 720 } 
+          } 
+        });
+        activeStream = s;
+        setStream(s);
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+        }
+        setCameraLoading(false);
+      } catch (err) {
+        console.error("Camera error facingMode:", facingMode, err);
+        // Fallback to standard
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({ video: true });
+          activeStream = s;
+          setStream(s);
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+          }
+          setCameraLoading(false);
+        } catch (innerErr) {
+          console.error("Critical camera load failure:", innerErr);
+          alert("Please check that camera permission is allowed to use this feature.");
+          onClose();
+        }
+      }
+    };
+
+    startCameraAndTrack();
+
+    return () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [facingMode]);
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black z-10 pointer-events-none opacity-60" />
-      
-      {/* HUD Overlay */}
-      <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-10 font-mono">
-        <div className="flex justify-between items-start">
-          <div className="text-[#8AB67C] flex flex-col gap-2">
-             <div className="text-xl font-black italic">PATHOLOGY_SCAN_INIT</div>
-             <div className="text-[10px] opacity-60 flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-[#8AB67C] animate-pulse" />
-               SENSOR_SYNC_04 // NOMINAL
-             </div>
+    <div className="fixed inset-0 z-[110] bg-[#050705] flex flex-col items-center justify-between p-4 md:p-8 select-none">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(138,182,124,0.04)_0%,transparent_70%)] pointer-events-none" />
+
+      {/* Top Bar Navigation */}
+      <header className="w-full max-w-xl flex items-center justify-between z-20 pt-2 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#8AB67C]/10 border border-[#8AB67C]/30 flex items-center justify-center">
+            <Camera className="w-4 h-4 text-[#8AB67C] animate-pulse" />
           </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10px] uppercase tracking-[0.4em] text-white/40 font-black">
-             <span className="text-white/60">SPECTRA:</span> IR+VISIBLE
-             <span className="text-white/60">RES:</span> 4K_NATIVE
-             <span className="text-white/60">LATENCY:</span> 12ms
+          <div>
+            <h1 className="text-sm font-bold text-[#E0E7E0] tracking-tight">AgroCare Live Scanner</h1>
+            <p className="text-[10px] text-[#A3AFA3]/60 font-mono tracking-widest uppercase">System Core v4.2</p>
           </div>
         </div>
+        
+        <button 
+          onClick={() => {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            onClose();
+          }}
+          className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center text-[#A3AFA3] hover:text-white transition-colors cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </header>
 
-        {/* Reticle */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 flex items-center justify-center">
-          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-[#8AB67C] shadow-[0_0_15px_rgba(138,182,124,0.5)]" />
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-[#8AB67C] shadow-[0_0_15px_rgba(138,182,124,0.5)]" />
-          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-[#8AB67C] shadow-[0_0_15px_rgba(138,182,124,0.5)]" />
-          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-[#8AB67C] shadow-[0_0_15px_rgba(138,182,124,0.5)]" />
-          
-          {/* Scanning Bar */}
-          <motion.div 
-            animate={{ top: ['0%', '100%', '0%'] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            className="absolute left-0 right-0 h-0.5 bg-[#8AB67C] shadow-[0_0_20px_#8AB67C] z-30"
-          />
-        </div>
+      {/* Camera Feed Box */}
+      <div className="relative w-full max-w-xl aspect-[3/4] bg-black rounded-[2rem] overflow-hidden border border-[#2D382D] shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex items-center justify-center">
+        
+        {/* Shutter flash feedback layer */}
+        <AnimatePresence>
+          {isFlashed && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 bg-white z-40 mix-blend-screen flex items-center justify-center"
+            />
+          )}
+        </AnimatePresence>
 
-        <div className="flex justify-between items-end">
-          <div className="text-[10px] text-[#8AB67C] flex flex-col gap-1 max-w-[200px]">
-             <div className="opacity-40 uppercase tracking-widest">Cellular_Mapping:</div>
-             <div className="flex items-center gap-2">
-               <div className="flex-1 h-0.5 bg-[#8AB67C]/10 rounded-full overflow-hidden">
-                 <motion.div 
-                   animate={{ width: ['40%', '98%', '85%'] }}
-                   transition={{ duration: 10, repeat: Infinity }}
-                   className="h-full bg-[#8AB67C]"
-                 />
-               </div>
-               <span className="font-bold">ACTIVE</span>
-             </div>
+        {/* Loading Spinner */}
+        {cameraLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0A0D0A] z-30 gap-3">
+            <Loader2 className="w-8 h-8 text-[#8AB67C] animate-spin" />
+            <span className="text-[9.5px] uppercase tracking-[0.3em] font-mono text-[#8AB67C]/70">Warming Optical Core...</span>
           </div>
-          <div className="text-[10px] opacity-40 text-right tracking-[0.2em] font-black italic">
-            ALIGN TARGET AREA <br/>
-            WAITING FOR OPTICAL LOCK...
-          </div>
-        </div>
-      </div>
+        )}
 
-      <div className="relative w-full max-w-xl aspect-[3/4] bg-[#0D110D] rounded-[2.5rem] overflow-hidden border border-[#1F261F] shadow-[0_0_100px_rgba(0,0,0,0.8)]">
+        {/* The Live Premium COLOR Video */}
         <video 
           ref={videoRef} 
           autoPlay 
           playsInline 
-          className="w-full h-full object-cover grayscale brightness-125 contrast-125 saturate-50" 
+          className="w-full h-full object-cover transition-opacity duration-500" 
+          style={{ opacity: cameraLoading ? 0 : 1 }}
         />
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* Camera HUD Reticle & Overlay */}
+        {!cameraLoading && (
+          <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-6 md:p-8 font-mono">
+            {/* Top diagnostic HUD */}
+            <div className="flex justify-between items-start">
+              <div className="text-[#8AB67C]/90 flex flex-col gap-1 text-[10px]">
+                 <div className="font-bold flex items-center gap-1.5">
+                   <span className="w-2 h-2 rounded-full bg-[#8AB67C] animate-ping" />
+                   CHROMATIC_FEED_ON
+                 </div>
+                 <div className="opacity-40 text-[8px] tracking-wider uppercase">SPECTRAL: FULL COLOR</div>
+              </div>
+              <div className="text-right text-[8px] uppercase tracking-widest text-[#E0E7E0]/40 flex flex-col gap-0.5">
+                 <div>RES: 1280x720</div>
+                 <div>BRIGHTNESS: OPTIMAL</div>
+              </div>
+            </div>
+
+            {/* Target Reticle Grid */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-60 h-60 relative flex items-center justify-center">
+                {/* 4 outer brackets */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-[#8AB67C] shadow-[0_0_12px_rgba(138,182,124,0.4)] rounded-tl-md" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-[#8AB67C] shadow-[0_0_12px_rgba(138,182,124,0.4)] rounded-tr-md" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-[#8AB67C] shadow-[0_0_12px_rgba(138,182,124,0.4)] rounded-bl-md" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-[#8AB67C] shadow-[0_0_12px_rgba(138,182,124,0.4)] rounded-br-md" />
+                
+                {/* Rolling Green laser scanner effect */}
+                <motion.div 
+                  animate={{ top: ['4%', '96%', '4%'] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute left-1 right-1 h-0.5 bg-[#8AB67C]/70 shadow-[0_0_15px_rgba(138,182,124,0.8)] z-10"
+                />
+
+                <div className="text-[8px] tracking-[0.25em] text-[#8AB67C]/50 text-center font-bold uppercase absolute -bottom-8 left-1/2 -translate-x-1/2 w-48">
+                  Center disease area
+                </div>
+              </div>
+            </div>
+
+            {/* Rule of Thirds - Photographic Grid Overlay */}
+            {showGrid && (
+              <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
+                <div className="border-r border-b border-white/10" />
+                <div className="border-r border-b border-white/10" />
+                <div className="border-b border-white/10" />
+                <div className="border-r border-b border-white/10" />
+                <div className="border-r border-b border-white/10" />
+                <div className="border-b border-white/10" />
+                <div className="border-r border-white/10" />
+                <div className="border-r border-white/10" />
+                <div className="border-transparent" />
+              </div>
+            )}
+
+            {/* Bottom HUD dynamic bar */}
+            <div className="flex justify-between items-end">
+              <div className="text-[8px] text-[#A3AFA3]/50 flex flex-col gap-0.5">
+                 <span>CHNL_SYS: SECURE</span>
+                 <span>LATENCY: 9MS</span>
+              </div>
+              <div className="text-[8px] text-right text-[#8AB67C]/55 font-bold uppercase tracking-widest">
+                Optical Lock Ready
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="mt-12 flex gap-10 items-center z-50">
+      {/* Prompts info bar */}
+      <div className="w-full max-w-xl text-center px-4">
+        <p className="text-xs text-[#A3AFA3] font-sans font-medium tracking-wide">
+          Hold device steady and capture clear disease-spotted details for premium AI diagnosis.
+        </p>
+      </div>
+
+      {/* Camera Controls Bar (Footer controls tray) */}
+      <div className="w-full max-w-xl flex justify-between items-center z-20 pb-4 pt-2">
+        {/* Switch Camera Button */}
         <motion.button 
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => { stream?.getTracks().forEach(t => t.stop()); onClose(); }}
-          className="p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')}
+          className="w-12 h-12 rounded-full border border-white/10 bg-white/5 active:bg-white/15 flex items-center justify-center text-[#A3AFA3] hover:text-[#8AB67C] transition-all cursor-pointer shadow-lg"
+          title="Switch Camera (Front/Back)"
         >
-          <X className="w-6 h-6 text-[#A3AFA3]" />
+          <RefreshCw className="w-5 h-5 transition-transform duration-500 hover:rotate-180" />
         </motion.button>
+
+        {/* Shoot Shutter Shutter Button */}
+        <div className="relative">
+          <motion.button 
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={capture}
+            disabled={cameraLoading}
+            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-2xl relative cursor-pointer ${
+              cameraLoading ? 'bg-zinc-800 pointer-events-none' : 'bg-[#E3EFE0]'
+            }`}
+          >
+            <div className="w-full h-full rounded-full border-4 border-solid border-[#050705] flex items-center justify-center select-none">
+              <div className="w-14 h-14 rounded-full bg-[#8AB67C] hover:bg-[#7aa66c] shadow-[0_0_12px_rgba(138,182,124,0.4)] active:scale-95 transition-colors" />
+            </div>
+          </motion.button>
+          
+          {/* Subtle pulse backdrop glow around capture button */}
+          <div className="absolute -inset-1 rounded-full border border-[#8AB67C]/20 animate-ping -z-10 opacity-30 pointer-events-none" />
+        </div>
+
+        {/* Toggle Grid Overlay Button */}
         <motion.button 
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={capture}
-          className="w-24 h-24 rounded-full bg-white flex items-center justify-center p-2 shadow-2xl relative"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowGrid(prev => !prev)}
+          className={`w-12 h-12 rounded-full border flex items-center justify-center transition-all cursor-pointer shadow-lg ${
+            showGrid 
+              ? 'border-[#8AB67C]/30 bg-[#8AB67C]/10 text-[#8AB67C]' 
+              : 'border-white/10 bg-white/5 text-[#A3AFA3] hover:bg-white/10'
+          }`}
+          title="Toggle Alignment Grid (3x3)"
         >
-          <div className="w-full h-full rounded-full border-4 border-[#8AB67C] flex items-center justify-center ring-4 ring-black/5">
-            <div className="w-8 h-8 rounded-full bg-[#8AB67C] shadow-[0_0_15px_#8AB67C]" />
-          </div>
-          {/* Snap pulses */}
-          <div className="absolute inset-0 rounded-full border-2 border-white animate-[pulse-glow_2s_infinite]" />
+          <Eye className="w-5 h-5" />
         </motion.button>
-        <div className="w-20" /> {/* Spacer */}
       </div>
     </div>
   );
+}
+
+interface HistorySession {
+  id: string;
+  timestamp: string;
+  cropId: string;
+  symptoms: string[];
+  diagnosis: Diagnosis;
 }
 
 // --- MAIN APP ---
@@ -326,7 +481,18 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
 
+  const [history, setHistory] = useState<HistorySession[]>(() => {
+    try {
+      const saved = localStorage.getItem('agrocare_diagnosis_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
   const toggleSymptom = (id: string) => {
+    setActiveHistoryId(null);
     setSelectedSymptoms(prev => 
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     );
@@ -478,7 +644,47 @@ export default function App() {
     setSelectedSymptoms([]);
     setShowResult(false);
     setAiDiagnosis(null);
+    setActiveHistoryId(null);
   };
+
+  const loadHistorySession = (session: HistorySession) => {
+    setSelectedCrop(session.cropId);
+    setSelectedSymptoms(session.symptoms);
+    setAiDiagnosis(session.diagnosis);
+    setShowResult(true);
+    setActiveHistoryId(session.id);
+  };
+
+  React.useEffect(() => {
+    if (showResult && selectedCrop && currentDiagnosis) {
+      if (activeHistoryId) return;
+
+      setHistory(prev => {
+        const isDuplicate = prev.length > 0 && 
+          prev[0].cropId === selectedCrop && 
+          JSON.stringify([...prev[0].symptoms].sort()) === JSON.stringify([...selectedSymptoms].sort()) &&
+          prev[0].diagnosis.issue === currentDiagnosis.issue;
+
+        if (isDuplicate) return prev;
+
+        const newSession: HistorySession = {
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          cropId: selectedCrop,
+          symptoms: selectedSymptoms,
+          diagnosis: currentDiagnosis
+        };
+
+        const updated = [newSession, ...prev].slice(0, 5);
+        try {
+          localStorage.setItem('agrocare_diagnosis_history', JSON.stringify(updated));
+        } catch (e) {
+          console.error("Failed to save history to localStorage:", e);
+        }
+        return updated;
+      });
+    }
+  }, [showResult, selectedCrop, selectedSymptoms, currentDiagnosis, activeHistoryId]);
 
   const selectedCropData = CROPS.find(c => c.id === selectedCrop);
 
@@ -517,9 +723,6 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="hidden md:flex items-center gap-2 px-6 py-2.5 border border-[#1F261F] text-[10px] uppercase tracking-widest font-black rounded-lg hover:bg-white/5 transition-all">
-            Database
-          </button>
           <button 
             onClick={() => setIsChatOpen(!isChatOpen)}
             className="p-3 bg-[#8AB67C]/10 border border-[#8AB67C]/20 text-[#8AB67C] rounded-xl hover:bg-[#8AB67C] hover:text-[#0A0D0A] transition-all shadow-lg"
@@ -542,6 +745,74 @@ export default function App() {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
               <Camera className="w-4 h-4" /> AI Visual Scanner
             </motion.button>
+            <div className="h-px bg-[#1F261F] my-2" />
+          </div>
+
+          {/* Diagnosis History Section */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-[11px] uppercase tracking-[0.3em] text-[#8AB67C] font-black flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 shrink-0" /> Diagnosis History
+              </h2>
+              {history.length > 0 && (
+                <button 
+                  onClick={() => {
+                    setHistory([]);
+                    localStorage.removeItem('agrocare_diagnosis_history');
+                  }}
+                  className="text-[9px] uppercase tracking-widest text-rose-400 hover:text-rose-300 font-bold transition-colors cursor-pointer"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+            
+            {history.length === 0 ? (
+              <div className="bg-[#0D110D]/50 border border-[#1F261F] text-center p-5 rounded-xl font-mono text-[9px] uppercase text-[#A3AFA3]/30 tracking-widest">
+                No recent reports
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                {history.map((session) => {
+                  const crop = CROPS.find(c => c.id === session.cropId);
+                  const isCurrentlyActive = activeHistoryId === session.id;
+                  return (
+                    <button
+                      key={session.id}
+                      onClick={() => loadHistorySession(session)}
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all duration-300 relative overflow-hidden group flex flex-col gap-1.5 cursor-pointer ${
+                        isCurrentlyActive
+                          ? 'bg-[#1A201A] border-[#8AB67C] ring-1 ring-[#8AB67C]/25 shadow-[0_0_15px_rgba(138,182,124,0.1)]'
+                          : 'bg-[#0D110D] border-[#1F261F] hover:border-[#2D382D] hover:bg-[#111611]'
+                      }`}
+                    >
+                      {/* Left severity indicator border */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                        session.diagnosis.severity === 'high' ? 'bg-rose-500' :
+                        session.diagnosis.severity === 'medium' ? 'bg-amber-500' : 'bg-[#8AB67C]'
+                      }`} />
+
+                      <div className="pl-2.5 flex items-start justify-between gap-2 w-full">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-base shrink-0">{crop?.icon !== 'root' ? crop?.icon : '🌱'}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-bold text-[#E0E7E0] truncate">
+                              {crop?.name || 'Unknown'}
+                            </span>
+                            <span className="text-[#A3AFA3] font-serif italic text-[10px] truncate max-w-[220px]">
+                              {session.diagnosis.issue.split('(')[0].trim()}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[8px] font-mono opacity-40 shrink-0 font-medium pt-0.5">
+                          {session.timestamp.split(' ').slice(-1)[0]}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <div className="h-px bg-[#1F261F] my-2" />
           </div>
 
@@ -571,6 +842,7 @@ export default function App() {
                       setSelectedCrop(crop.id);
                       setShowResult(false);
                       setAiDiagnosis(null);
+                      setActiveHistoryId(null);
                     }}
                     className={`px-4 py-4 rounded-xl text-left text-sm transition-all duration-300 flex items-center gap-3 border ${
                       isSelected 
@@ -969,6 +1241,16 @@ export default function App() {
               </div>
             </form>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Camera Module */}
+      <AnimatePresence>
+        {isCameraOpen && (
+          <CameraModal 
+            onCapture={analyzeWithAI} 
+            onClose={() => setIsCameraOpen(false)} 
+          />
         )}
       </AnimatePresence>
 
