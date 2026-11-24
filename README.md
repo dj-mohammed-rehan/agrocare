@@ -1,20 +1,37 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# AgroCare
 
-# Run and deploy your AI Studio app
+AI-powered crop diagnosis and treatment recommendations, built by Team Tech Titans.
 
-This contains everything you need to run your app locally.
+AgroCare turns a phone or laptop camera into a crop doctor. Capture a photo of an affected plant and the app analyzes it with Google's Gemini model to identify likely diseases, pests or deficiencies, then suggests treatment steps.
 
-View your app in AI Studio: https://ai.studio/apps/636cf794-9724-4660-8c19-f19502cac8dc
+## Features
 
-## Run Locally
+- Camera-based crop scanning using the device camera
+- AI diagnosis of plant diseases, pests and nutrient deficiencies
+- Treatment and care recommendations
+- Runs in the browser, no installation needed
 
-**Prerequisites:**  Node.js
+## Tech stack
 
+- React 19, TypeScript and Vite
+- Tailwind CSS 4
+- Google Gemini API (`@google/genai`)
+- Express backend
+
+## Run locally
+
+**Prerequisites:** Node.js
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Set `GEMINI_API_KEY` in `.env.local` to your Gemini API key
+3. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
