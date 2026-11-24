@@ -4,6 +4,12 @@ A crop-diagnosis prototype built by Team Tech Titans, with rule-based guidance a
 
 AgroCare turns a phone or laptop camera into a crop doctor. Capture a photo of an affected plant and the app analyzes it with Google's Gemini model to identify likely diseases, pests or deficiencies, then suggests treatment steps.
 
+## Live demo
+
+[Open the AgroCare rule-based demo](https://dj-mohammed-rehan.github.io/agrocare/).
+
+The live site is a separate, key-free demo in `docs/index.html`. Camera analysis and AI chat are unavailable there; built-in crop and symptom rules are used instead. It makes no AI requests. The original React source remains available for development.
+
 ## Prototype status
 
 AI calls currently run in the browser. Do not publish this version with a real Gemini key; move those calls to a protected server first.
