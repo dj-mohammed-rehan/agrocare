@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="AgroCare crop-guidance prototype by Team Tech Titans. Explore built-in crop and symptom rules without an API key."><title>AgroCare | Crop guidance demo</title><style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#0b100e;color:#e9eee9;line-height:1.6}header,main,footer{max-width:1120px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2d3a30}.brand{font-size:25px;font-weight:750;letter-spacing:-1px}.muted{color:#acb9ad}.tag{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:#b6d6ae}.notice{border:1px solid #40513f;background:#162117;padding:18px;margin:24px 0}h1{font-family:Georgia,serif;font-size:clamp(36px,6vw,64px);line-height:1.1;font-weight:400;margin:16px 0}h2{font-size:22px;font-weight:600}h3{margin:0 0 8px;font-size:17px}button,select{font:inherit}button{cursor:pointer;border:1px solid #40513f;background:#162117;color:#e9eee9;padding:12px 18px;border-radius:3px}button:hover{border-color:#afcda4}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #b6d6ae;outline-offset:3px}button[aria-pressed=true],button.primary{background:#b6d6ae;color:#10200f;border-color:#b6d6ae}button:disabled{opacity:.5;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:32px}.panel{border:1px solid #2d3a30;padding:24px;background:#0f1711}select{width:100%;padding:14px;background:#162117;color:#e9eee9;border:1px solid #40513f;border-radius:3px}.symptoms{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0}.symptoms button{font-size:13px;padding:8px 12px}p{margin:8px 0 16px}.result-section{border-top:1px solid #2d3a30;padding-top:16px;margin-top:20px}.full{width:100%}a{color:#b6d6ae}footer{font-size:13px;border-top:1px solid #2d3a30;margin-top:40px}@media(max-width:700px){header,main,footer{padding:18px}.grid{grid-template-columns:1fr;gap:18px}.panel{padding:20px}header .muted{display:none}}</style></head><body><header><div><div class="brand">AgroCare</div><div class="tag">By Team Tech Titans</div></div><span class="muted">Crop guidance prototype</span></header><main><div class="notice"><strong>Portfolio demo. No live AI.</strong> Camera analysis and AI chat are unavailable in this version. It uses built-in rules only, with no API key or photo uploads.</div><div class="tag">Observe. Select. Explore.</div><h1>Understand the signs.<br>Start with your crop.</h1><p class="muted">Choose a crop and the symptoms you can see to explore general guidance from the prototype's built-in rules.</p><div class="grid"><section class="panel"><h2>Crop and symptoms</h2><label for="crop">Choose your crop</label><select id="crop"><option value="">Select a crop</option></select><p class="muted" id="coverage">Specific rules are currently available for tomato, rice and maize. Other selections show general plant-care guidance.</p><div class="symptoms" id="symptoms" aria-label="Select visible symptoms"></div><button class="primary full" id="analyze" disabled>Show rule-based guidance</button><button class="full" id="reset" style="margin-top:10px">Reset selection</button></section><section class="panel" id="result" aria-live="polite"><div class="tag">Guidance preview</div><h2>Your observations go here</h2><p class="muted">Select a crop and at least one symptom. This demo does not identify a disease from a photo or confirm a diagnosis.</p></section></div><div class="notice"><strong>Educational use only.</strong> These are unvalidated prototype rules, not a confirmed diagnosis or treatment prescription. Confirm any disease and chemical treatment with a local agriculture expert. Follow product labels and local rules. This version does not save your selections.</div></main><footer>AgroCare by Team Tech Titans · Rule-based portfolio demo · <a href="https://github.com/dj-mohammed-rehan/agrocare">Source repository</a></footer><script>const crops=[["rice", "Rice"], ["tomato", "Tomato"], ["maize", "Maize"], ["wheat", "Wheat"], ["chili", "Chili"], ["potato", "Potato"], ["sugarcane", "Sugarcane"], ["cotton", "Cotton"], ["soybean", "Soybean"], ["barley", "Barley"], ["millet", "Millet"], ["sorghum", "Sorghum"], ["groundnut", "Groundnut"], ["mustard", "Mustard"], ["sunflower", "Sunflower"], ["coffee", "Coffee"], ["tea", "Tea"], ["rubber", "Rubber"], ["apple", "Apple"], ["mango", "Mango"], ["banana", "Banana"], ["grapes", "Grapes"], ["citrus", "Citrus"], ["onion", "Onion"], ["garlic", "Garlic"], ["cabbage", "Cabbage"], ["cauliflower", "Cauliflower"], ["brinjal", "Eggplant"], ["bhendi", "Okra"], ["turmeric", "Turmeric"], ["ginger", "Ginger"], ["tobacco", "Tobacco"], ["jute", "Jute"]];const symptoms=[["yellow_leaves", "Yellow Leaves"], ["brown_spots", "Brown Spots"], ["leaf_holes", "Holes in Leaves"], ["wilting", "Wilting"], ["white_powder", "White Powder"], ["curling", "Curled Leaves"], ["stunted", "Stunted Growth"], ["pests_visible", "Visible Pests"], ["deformed_fruit", "Deformed Fruit"], ["gray_mold", "Gray Mold"], ["black_soot", "Black Sooty Mold"], ["burnt_edges", "Burnt Edge Tips"], ["sticky_residue", "Sticky Honeydew"], ["dropping_leaves", "Premature Leaf Drop"], ["yellow_veins", "Yellow Veins"], ["necrotic_spots", "Necrotic Spots"], ["webbing", "Fine Webbing"], ["silvering", "Silvering Surface"], ["leaf_mining", "Leaf Mining Trails"], ["moldy_roots", "Mushy Roots"], ["ooze", "Bacterial Ooze"], ["galls", "Galls/Swelling"], ["powdery_mildew", "Powdery Mildew"]];const rules={
+  tomato: {
+    'yellow_leaves,brown_spots': {
+      issue: "Early Fungal Infection (Blight)",
+      solution: "Remove affected leaves immediately and improve spacing.",
+      avoid: "Avoid overhead watering; it spreads fungal spores.",
+      pesticide: "Chlorothalonil or Copper-based organic fungicide.",
+      next: "Apply treatment every 7-10 days if humidity persists.",
+      severity: 'medium'
+    },
+    'wilting': {
+      issue: "Bacterial Wilt or Root Rot",
+      solution: "Check soil moisture. If soil is wet, improve drainage.",
+      avoid: "Do not move items from this plant to healthy ones.",
+      pesticide: "No direct pesticide; use soil drench with Streptomycin if bacterial.",
+      next: "Solarize the soil before the next planting season to kill pathogens.",
+      severity: 'high'
+    },
+    'white_powder': {
+      issue: "Powdery Mildew",
+      solution: "Spray a mixture of 1 part milk and 9 parts water on leaves.",
+      avoid: "Avoid high humidity and crowded planting.",
+      pesticide: "Sulfur or Potassium Bicarbonate sprays.",
+      next: "Monitor weekly; ensure morning sun reaches all parts of the plant.",
+      severity: 'medium'
+    }
+  },
+  rice: {
+    'yellow_leaves': {
+      issue: "Nitrogen Deficiency",
+      solution: "Apply a small amount of urea or nitrogen-rich compost.",
+      avoid: "Do not flood the field excessively; it can leach nutrients.",
+      pesticide: "N/A (Nutritional Issue). Use Balanced Fertilizer.",
+      next: "Test soil for NPK levels for the next crop cycle.",
+      severity: 'low'
+    },
+    'leaf_holes': {
+      issue: "Pest Infestation (Stem Borer or Leaf Folder)",
+      solution: "Check for larvae inside rolled leaves.",
+      avoid: "Avoid over-applying nitrogen, which attracts more pests.",
+      pesticide: "Cartap hydrochloride 50SP or Chlorantraniliprole 18.5 SC.",
+      next: "Set up light traps at night to attract and kill adult moths.",
+      severity: 'medium'
+    }
+  },
+  maize: {
+    'leaf_holes': {
+      issue: "Fall Armyworm Damage",
+      solution: "Hand-pick caterpillars from the whorl (center) of the plant.",
+      avoid: "Don't ignore small holes; they become large ragged edges fast.",
+      pesticide: "Spinetoram 11.7 SC or Emamectin benzoate 5 SG.",
+      next: "Deep ploughing in summer to expose pupae to birds and sun.",
+      severity: 'high'
+    },
+    'stunted': {
+      issue: "Low Phosphorus or Soil Acidity",
+      solution: "Apply well-rotted manure or phosphorus fertilizer.",
+      avoid: "Avoid planting in waterlogged spots.",
+      pesticide: "N/A (Soil Issue). Apply Rock Phosphate or Lime.",
+      next: "Consider a official soil pH test; lime can reduce acidity.",
+      severity: 'low'
+    }
+  },
+  generic: {
+    'default': {
+      issue: "General Plant Stress",
+      solution: "Ensure consistent watering and check for visible pests.",
+      avoid: "Don't apply chemicals until the issue is clearly identified.",
+      pesticide: "Neem Oil (General Organic Preventive).",
+      next: "Consult a local agriculture extension officer with a photo.",
+      severity: 'low'
+    }
+  }
+};
+const selected=new Set();const crop=document.getElementById('crop');const result=document.getElementById('result');const analyze=document.getElementById('analyze');
+for(const [id,name] of crops){const o=document.createElement('option');o.value=id;o.textContent=name;crop.append(o)}
+for(const [id,name] of symptoms){const b=document.createElement('button');b.type='button';b.textContent=name;b.setAttribute('aria-pressed','false');b.onclick=()=>{selected.has(id)?selected.delete(id):selected.add(id);b.setAttribute('aria-pressed',String(selected.has(id)));update()};document.getElementById('symptoms').append(b)}
+function update(){analyze.disabled=!crop.value||!selected.size}
+crop.onchange=update;
+function text(tag,value,parent=result){const e=document.createElement(tag);e.textContent=value;parent.append(e);return e}
+analyze.onclick=()=>{const r=rules[crop.value]||{};let d=r[[...selected].sort().join(',')];if(!d){d=r[[...selected].find(x=>r[x])]};const specific=!!d;d=d||rules.generic.default;result.replaceChildren();text('div',specific?'BUILT-IN RULE MATCH':'GENERAL GUIDANCE').className='tag';text('h2',d.issue);text('p','Selected: '+crops.find(x=>x[0]===crop.value)[1]+' / '+[...selected].map(id=>symptoms.find(x=>x[0]===id)[1]).join(', '));text('p',specific?'A possible issue from a limited rule set, not a diagnosis.':'No crop-specific rule matched. This is generic guidance, not an identification.').className='muted';for(const [title,value] of [['Observation and care',d.solution],['What to avoid',d.avoid],['Next steps',d.next]]){const p=text('div','');p.className='result-section';text('h3',title,p);text('p',value,p)}text('p','Confirm the cause with an agriculture expert before treatment.').className='muted';if(innerWidth<700)result.scrollIntoView({behavior:'smooth',block:'start'})};
+document.getElementById('reset').onclick=()=>{crop.value='';selected.clear();document.querySelectorAll('[aria-pressed]').forEach(b=>b.setAttribute('aria-pressed','false'));update();result.replaceChildren();text('h2','Your observations go here');text('p','Choose a crop and visible symptoms to begin.')};</script></body></html>
